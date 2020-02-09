@@ -224,8 +224,15 @@ void tokenizer::advance() noexcept {
         // This is a number literal
         if (c == '+' || c == '-') {
             _take(1);
+            if (_head == _full_buffer.end()) {
+                // A lone `+` or `-` is no good!
+                _current_kind = token::invalid;
+            } else {
+                adv_number();
+            }
+        } else {
+            adv_number();
         }
-        adv_number();
     } else {
         _current_kind = token::invalid;
         _take(1);
