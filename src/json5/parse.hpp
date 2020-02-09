@@ -42,24 +42,25 @@ class parser {
     tokenizer _toks;
     bool      _done = false;
 
-    std::bitset<256> _nest_flag_bits;
-    std::uint8_t     _nest_depth = 0;
+    std::bitset<1024> _nest_flag_bits;
+    std::size_t       _nest_depth = 0;
 
     std::string_view _error_message;
 
-    friend class detail::parser_impl;
+    friend struct detail::parser_impl;
 
     enum state_t {
-        init,
+        top,
 
         array_value_or_close,
         array_tail,
 
         object_key_or_close,
+        object_kv_colon,
         object_value,
         object_tail,
     } _state
-        = init;
+        = top;
 
 public:
     explicit parser(std::string_view buf)

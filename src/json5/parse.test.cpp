@@ -96,6 +96,8 @@ TEST_CASE("Objects") {
         "{foo: 2.2,}",
         "{/* Comment */ foo: 2.2}",
         "{/* Comment */ foo: 2.2, }",
+        "{/* Comment */ foo /* bar */: 2.2, }",
+        "{/* Comment */ foo /* bar */ : /* baz */ 2.2, }",
     };
 
     for (auto s : strings) {
@@ -111,17 +113,47 @@ TEST_CASE("Objects") {
 }
 
 TEST_CASE("Resumable") {
-    check_parse("[1, 2, 3] /* Comment */ [1, 2, 3]", {
-        {pek::array_begin, "["},
-        {pek::number_literal, "1"},
-        {pek::number_literal, "2"},
-        {pek::number_literal, "3"},
-        {pek::array_end, "]"},
-        {pek::array_begin, "["},
-        {pek::number_literal, "1"},
-        {pek::number_literal, "2"},
-        {pek::number_literal, "3"},
-        {pek::array_end, "]"},
-        {pek::eof, ""},
-    });
+    check_parse("[1, 2, 3] /* Comment */ [1, 2, 3]",
+                {
+                    {pek::array_begin, "["},
+                    {pek::number_literal, "1"},
+                    {pek::number_literal, "2"},
+                    {pek::number_literal, "3"},
+                    {pek::array_end, "]"},
+                    {pek::array_begin, "["},
+                    {pek::number_literal, "1"},
+                    {pek::number_literal, "2"},
+                    {pek::number_literal, "3"},
+                    {pek::array_end, "]"},
+                    {pek::eof, ""},
+                });
+}
+
+void check_reject(std::string_view str, std::string_view expect_message) {
+    INFO("Parsing bad string: " << str);
+    INFO("Expecting message: " << expect_message);
+    json5::parser p{str};
+    for (auto ev : p) {
+        if (ev.kind == json5::parse_event::eof) {
+            FAIL_CHECK("End-of-file reached without generating an error");
+        }
+        if (ev.kind == json5::parse_event::invalid) {
+            CHECK(p.error_message() == expect_message);
+            break;
+        }
+    }
+}
+
+TEST_CASE("Reject") {
+    check_reject(".[{{A", "Invalid token");
+    check_reject("{", "Unterminated object literal");
+    check_reject("[", "Unterminated array literal");
+    check_reject("[12, ", "Unterminated array literal");
+    check_reject("[12", "Unterminated array literal");
+    check_reject("/* bad comment", "Unterminated block comment");
+    check_reject("{12: 'string'}", "Object member keys must be strings or identifiers.");
+    check_reject("['foo',,]", "Extraneous `,` in array literal.");
+    check_reject("{'foo': ,}", "Expected value before `,` in object literal.");
+    check_reject("{'foo': 12,,}", "Extraneous `,` in object literal.");
+    check_reject("foo", "An object key identifier is not a valid value.");
 }
