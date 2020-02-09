@@ -1,0 +1,9 @@
+Compiler-ID: GNU
+C++-Version: C++17
+C-Compiler: gcc-9
+C++-Compiler: g++-9
+C++-Flags: -fconcepts
+# Link-Flags: -static-libgcc -static-libstdc++
+Debug: True
+# Optimize: True
+Compiler-Launcher: ccache
