@@ -126,10 +126,18 @@ void tokenizer::advance() noexcept {
     // Tokenize a number literal.
     auto adv_number = [&] {
         _current_kind = token::number_literal;
+        if (*_head == '.') {
+            // Leading off with a dot *requires* that we have trailing decimal digits
+            if (!std::isdigit(_peek(1))) {
+                _take(1);
+                _current_kind = token::invalid;
+                return;
+            }
+        }
         while (_head != _full_buffer.end() && std::isdigit(*_head)) {
             _take(1);
         }
-        if (*_head == '.' && std::isdigit(_peek(1))) {
+        if (_head != _full_buffer.end() && *_head == '.' && std::isdigit(_peek(1))) {
             _take(1);
             while (_head != _full_buffer.end() && std::isdigit(*_head)) {
                 _take(1);
