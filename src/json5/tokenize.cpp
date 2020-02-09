@@ -79,14 +79,16 @@ void tokenizer::_adv_line_comment() noexcept {
 }
 
 void tokenizer::_adv_block_comment() noexcept {
+    bool terminated = false;
     while (_head != _full_buffer.end()) {
         if (_peek(0) == '*' && _peek(1) == '/') {
             _take(2);
+            terminated = true;
             break;
         }
         _take(1);
     }
-    _current_kind = token::comment;
+    _current_kind = terminated ? token::comment : token::unterm_comment;
 }
 
 void tokenizer::advance() noexcept {

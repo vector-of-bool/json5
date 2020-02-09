@@ -16,6 +16,8 @@ struct token {
     enum kind_t {
         invalid,
         unterm_string,
+        unterm_comment,
+
         comment,
         identifier,
         punct_brace_open,
@@ -91,7 +93,7 @@ public:
     bool done() const noexcept { return _done; }
 
     std::string_view current_string() const noexcept {
-        return std::string_view(_tail, _head - _tail);
+        return std::string_view(_tail, static_cast<std::string_view::size_type>(_head - _tail));
     }
     token::kind_t current_kind() const noexcept { return _current_kind; }
     token current() const noexcept { return {current_string(), _line_no, _column, current_kind()}; }
