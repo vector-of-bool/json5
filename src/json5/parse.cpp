@@ -300,7 +300,7 @@ struct parser_impl {
     void pop_state() noexcept {
         assert(self._nest_depth > 0);
         --self._nest_depth;
-        self._nest_flag_bits <<= 1;
+        self._nest_flag_bits >>= 1;
         if (in_object()) {
             become(self.object_tail);
         } else if (in_array()) {
@@ -315,7 +315,7 @@ struct parser_impl {
             return fail("Array/object nesting is too deep.");
         }
         ++self._nest_depth;
-        self._nest_flag_bits >>= 1;
+        self._nest_flag_bits <<= 1;
         self._nest_flag_bits[0] = 0;
         // We always set our new state to be to expect an array value
         become(self.array_value_or_close);
@@ -332,7 +332,7 @@ struct parser_impl {
             return fail("Array/object nesting is too deep.");
         }
         ++self._nest_depth;
-        self._nest_flag_bits >>= 1;
+        self._nest_flag_bits <<= 1;
         self._nest_flag_bits[0] = 1;
         // We always set our new state to be to expect an object member
         become(self.object_key_or_close);

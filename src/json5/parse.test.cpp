@@ -52,6 +52,24 @@ TEST_CASE("Arrays") {
                     {pek::eof, ""},
                 });
 
+    check_parse("[[]]",
+                {
+                    {pek::array_begin, "["},
+                    {pek::array_begin, "["},
+                    {pek::array_end, "]"},
+                    {pek::array_end, "]"},
+                    {pek::eof, ""},
+                });
+
+    check_parse("[[],]",
+                {
+                    {pek::array_begin, "["},
+                    {pek::array_begin, "["},
+                    {pek::array_end, "]"},
+                    {pek::array_end, "]"},
+                    {pek::eof, ""},
+                });
+
     auto strings = {
         "[true]",
         "[true, ]",
@@ -87,6 +105,16 @@ TEST_CASE("Objects") {
                     {pek::object_begin, "{"},
                     {pek::object_key, "foo"},
                     {pek::number_literal, "1"},
+                    {pek::object_end, "}"},
+                    {pek::eof, ""},
+                });
+
+    check_parse("{foo: {},}",
+                {
+                    {pek::object_begin, "{"},
+                    {pek::object_key, "foo"},
+                    {pek::object_begin, "{"},
+                    {pek::object_end, "}"},
                     {pek::object_end, "}"},
                     {pek::eof, ""},
                 });
