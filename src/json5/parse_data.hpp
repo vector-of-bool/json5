@@ -3,7 +3,13 @@
 #include <json5/data.hpp>
 #include <json5/parse.hpp>
 
+#include <stdexcept>
+
 namespace json5 {
+
+struct parse_error : std::runtime_error {
+    using runtime_error::runtime_error;
+};
 
 template <typename Data = data>
 Data parse_next_value(parser& p);
