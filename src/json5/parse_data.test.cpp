@@ -17,6 +17,9 @@ TEST_CASE("Parse simple values") {
 
     v = json5::parse_data("'string\\n'");
     CHECK(v == "string\n");
+
+    v = json5::parse_data("\"String with \\\"quotes\\\"\"");
+    CHECK(v.as_string() == "String with \"quotes\"");
 }
 
 TEST_CASE("Parse arrays") {
