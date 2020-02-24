@@ -28,5 +28,5 @@ void json5::detail::throw_error(std::string_view message, token tok) {
     std::string what = "Error at input line " + std::to_string(tok.line) + ", column "
         + std::to_string(tok.column) + " (Token ‘" + std::string(tok.spelling)
         + "’): " + std::string(message);
-    throw std::runtime_error(what);
+    throw parse_error(what);
 }

@@ -3,7 +3,13 @@
 #include <json5/data.hpp>
 #include <json5/parse.hpp>
 
+#include <stdexcept>
+
 namespace json5 {
+
+struct parse_error : std::runtime_error {
+    using runtime_error::runtime_error;
+};
 
 template <typename Data = data>
 Data parse_next_value(parser& p);
@@ -46,12 +52,14 @@ String realize_string(token tok) {
 
     String ret;
     bool   escaped = false;
-    for (; it != stop && *it != quote; ++it) {
+    for (; it != stop; ++it) {
         char c = *it;
         if (escaped) {
             switch (c) {
+            case '"':
+            case '\'':
             case '\\':
-                ret.push_back('\\');
+                ret.push_back(c);
                 break;
             case 'n':
                 ret.push_back('\n');
@@ -65,12 +73,14 @@ String realize_string(token tok) {
             }
             escaped = false;
             continue;
-        }
-        if (c == '\\') {
+        } else if (c == '\\') {
             escaped = true;
             continue;
+        } else if (c == quote) {
+            break;
+        } else {
+            ret.push_back(c);
         }
-        ret.push_back(c);
     }
     if (it == stop || (std::next(it) != stop)) {
         throw_error("Invalid string token", tok);
