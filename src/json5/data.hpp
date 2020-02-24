@@ -18,6 +18,7 @@ public:
     using null_type    = typename traits_type::null_type;
     using array_type   = typename traits_type::template make_array_type<basic_data>;
     using object_type  = typename traits_type::template make_object_type<basic_data>;
+    using mapping_type = object_type;
 
     using variant_type = std::variant<null_type,  //
                                       string_type,
@@ -43,16 +44,16 @@ public:
         : _var(string_type(string)) {}
 
     template <typename T>
-    constexpr bool is() const noexcept {
+    constexpr bool holds_alternative() const noexcept {
         return std::holds_alternative<T>(_var);
     }
 
-    constexpr bool is_null() const noexcept { return is<null_type>(); }
-    constexpr bool is_string() const noexcept { return is<string_type>(); }
-    constexpr bool is_number() const noexcept { return is<number_type>(); }
-    constexpr bool is_boolean() const noexcept { return is<boolean_type>(); }
-    constexpr bool is_array() const noexcept { return is<array_type>(); }
-    constexpr bool is_object() const noexcept { return is<object_type>(); }
+    constexpr bool is_null() const noexcept { return holds_alternative<null_type>(); }
+    constexpr bool is_string() const noexcept { return holds_alternative<string_type>(); }
+    constexpr bool is_number() const noexcept { return holds_alternative<number_type>(); }
+    constexpr bool is_boolean() const noexcept { return holds_alternative<boolean_type>(); }
+    constexpr bool is_array() const noexcept { return holds_alternative<array_type>(); }
+    constexpr bool is_object() const noexcept { return holds_alternative<object_type>(); }
 
     template <typename T>
     constexpr T& as() {
