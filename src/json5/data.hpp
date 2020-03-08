@@ -27,6 +27,15 @@ public:
                                       array_type,
                                       object_type>;
 
+    template <typename T>
+    constexpr static bool _supports = false  //
+        || std::is_same_v<T, null_type>      //
+        || std::is_same_v<T, string_type>    //
+        || std::is_same_v<T, number_type>    //
+        || std::is_same_v<T, boolean_type>   //
+        || std::is_same_v<T, array_type>     //
+        || std::is_same_v<T, object_type>;
+
 private:
     variant_type _var;
 
@@ -56,13 +65,38 @@ public:
     constexpr bool is_object() const noexcept { return holds_alternative<object_type>(); }
 
     template <typename T>
-    constexpr T& as() {
+    constexpr friend bool holds_alternative(const basic_data& dat) noexcept {
+        return dat.holds_alternative<T>();
+    }
+
+    template <typename T>
+    constexpr friend T& get(basic_data& dat) {
+        return dat.as<T>();
+    }
+
+    template <typename T>
+    constexpr friend const T& get(const basic_data& dat) {
+        return dat.as<T>();
+    }
+
+    template <typename T>
+    constexpr friend T&& get(basic_data&& dat) {
+        return std::move(dat).template as<T>();
+    }
+
+    template <typename T>
+    constexpr T& as() & {
         return std::get<T>(_var);
     }
 
     template <typename T>
-    constexpr const T& as() const {
+    constexpr const T& as() const& {
         return std::get<T>(_var);
+    }
+
+    template <typename T>
+    constexpr T&& as() && {
+        return std::get<T>(std::move(_var));
     }
 
     constexpr null_type&    as_null() { return as<null_type>(); }
@@ -78,6 +112,9 @@ public:
     constexpr const boolean_type& as_boolean() const { return as<boolean_type>(); }
     constexpr const array_type&   as_array() const { return as<array_type>(); }
     constexpr const object_type&  as_object() const { return as<object_type>(); }
+
+    template <typename T>
+    constexpr static bool supports = _supports<T>;
 
     constexpr friend bool operator==(const basic_data& lhs, const basic_data& rhs) noexcept {
         return lhs._var == rhs._var;
