@@ -131,8 +131,6 @@ Data parse_inner(json5::parser& p, const json5::parse_event& ev) {
     using number_type  = typename Data::number_type;
     using null_type    = typename Data::null_type;
     using boolean_type = typename Data::boolean_type;
-    using array_type   = typename Data::array_type;
-    using mapping_type = typename Data::mapping_type;
 
     using pek = parse_event::kind_t;
     switch (ev.kind) {
