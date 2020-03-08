@@ -88,27 +88,27 @@ String realize_string(token tok) {
     return ret;
 }
 
-template <typename Array>
-Array parse_array_inner(json5::parser& p) {
-    Array ret;
+template <typename Data, typename ArrayType = typename Data::array_type>
+ArrayType parse_array_inner(json5::parser& p) {
+    ArrayType ret;
     for (auto ev = p.next(); ev.kind != ev.array_end; ev = p.next()) {
-        ret.push_back(parse_inner<typename Array::value_type>(p, ev));
+        ret.push_back(parse_inner<Data>(p, ev));
     }
     return ret;
 }
 
-template <typename Object>
-Object parse_object_inner(json5::parser& p) {
-    Object ret;
-    using key_type    = typename Object::key_type;
-    using mapped_type = typename Object::mapped_type;
+template <typename Data, typename ObjectType = typename Data::mapping_type>
+ObjectType parse_object_inner(json5::parser& p) {
+    ObjectType ret;
+    using key_type    = typename ObjectType::key_type;
+    using mapped_type = typename ObjectType::mapped_type;
     for (auto ev = p.next(); ev.kind != ev.object_end; ev = p.next()) {
         if (ev.kind != ev.object_key) {
             throw_error(p.error_message(), ev.token);
         }
         // Get that key!
-        key_type new_key;
-        auto     key_tok = ev.token;
+        key_type    new_key;
+        const auto& key_tok = ev.token;
         if (key_tok.kind == token::identifier) {
             new_key = key_type(key_tok.spelling);
         } else if (key_tok.kind == token::string_literal) {
@@ -118,7 +118,7 @@ Object parse_object_inner(json5::parser& p) {
         }
 
         // Get the corresponding value
-        mapped_type new_val = parse_next_value<mapped_type>(p);
+        auto new_val = static_cast<mapped_type>(parse_next_value<Data>(p));
 
         ret.emplace(std::move(new_key), std::move(new_val));
     }
@@ -131,8 +131,6 @@ Data parse_inner(json5::parser& p, const json5::parse_event& ev) {
     using number_type  = typename Data::number_type;
     using null_type    = typename Data::null_type;
     using boolean_type = typename Data::boolean_type;
-    using array_type   = typename Data::array_type;
-    using object_type  = typename Data::object_type;
 
     using pek = parse_event::kind_t;
     switch (ev.kind) {
@@ -149,9 +147,9 @@ Data parse_inner(json5::parser& p, const json5::parse_event& ev) {
     case pek::eof:
         throw_error("Unexpected end-of-input", ev.token);
     case pek::array_begin:
-        return parse_array_inner<array_type>(p);
+        return parse_array_inner<Data>(p);
     case pek::object_begin:
-        return parse_object_inner<object_type>(p);
+        return parse_object_inner<Data>(p);
     default:
         throw_error("Invalid parse event sequence", ev.token);
     }
@@ -167,7 +165,7 @@ Data parse_next_value(parser& p) {
 template <typename Data = data>
 Data parse_data(std::string_view str) {
     parser p{str};
-    auto   v      = parse_next_value(p);
+    auto   v      = parse_next_value<Data>(p);
     auto   eof_ev = p.next();
     if (eof_ev.kind != eof_ev.eof) {
         detail::throw_error("Trailing characters in JSON data", eof_ev.token);

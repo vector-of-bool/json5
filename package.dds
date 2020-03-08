@@ -1,5 +1,5 @@
-Name: json5
+Name: vob-json5
 Namespace: vob
-Version: 0.1.4
+Version: 0.1.5
 
 Test-Driver: Catch-Main
