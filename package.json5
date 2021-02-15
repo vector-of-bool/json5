@@ -1,6 +1,6 @@
 {
     name: 'vob-json5',
     namespace: 'vob',
-    version: '0.1.5',
+    version: '0.1.6',
     test_driver: 'Catch-Main',
 }
