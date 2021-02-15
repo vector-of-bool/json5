@@ -53,6 +53,9 @@ public:
         : _var(string_type(string)) {}
 
     template <typename T>
+    constexpr static bool supports = _supports<T>;
+
+    template <typename T>
     constexpr bool holds_alternative() const noexcept {
         return std::holds_alternative<T>(_var);
     }
@@ -70,33 +73,43 @@ public:
     }
 
     template <typename T>
-    constexpr friend T& get(basic_data& dat) {
+    constexpr friend T& get(basic_data& dat) requires supports<T> {
         return dat.as<T>();
     }
 
     template <typename T>
-    constexpr friend const T& get(const basic_data& dat) {
+    constexpr friend const T& get(const basic_data& dat) requires supports<T> {
         return dat.as<T>();
     }
 
     template <typename T>
-    constexpr friend T&& get(basic_data&& dat) {
+    constexpr friend T&& get(basic_data&& dat) requires supports<T> {
         return std::move(dat).template as<T>();
     }
 
     template <typename T>
-    constexpr T& as() & {
+        constexpr T& as() & requires supports<T> {
         return std::get<T>(_var);
     }
 
     template <typename T>
-    constexpr const T& as() const& {
+    constexpr const T& as() const& requires supports<T> {
         return std::get<T>(_var);
     }
 
     template <typename T>
-    constexpr T&& as() && {
+        constexpr T&& as() && requires supports<T> {
         return std::get<T>(std::move(_var));
+    }
+
+    template <typename T>
+    constexpr T* try_get() noexcept requires supports<T> {
+        return std::get_if<T>(&_var);
+    }
+
+    template <typename T>
+    constexpr const T* try_get() const noexcept requires supports<T> {
+        return std::get_if<T>(&_var);
     }
 
     constexpr null_type&    as_null() { return as<null_type>(); }
@@ -112,9 +125,6 @@ public:
     constexpr const boolean_type& as_boolean() const { return as<boolean_type>(); }
     constexpr const array_type&   as_array() const { return as<array_type>(); }
     constexpr const object_type&  as_object() const { return as<object_type>(); }
-
-    template <typename T>
-    constexpr static bool supports = _supports<T>;
 
     constexpr friend bool operator==(const basic_data& lhs, const basic_data& rhs) noexcept {
         return lhs._var == rhs._var;
