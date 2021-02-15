@@ -42,8 +42,8 @@ private:
 public:
     constexpr basic_data() = default;
 
-    template <typename Arg, typename = std::enable_if_t<std::is_convertible_v<Arg, variant_type>>>
-    constexpr basic_data(Arg&& arg)
+    template <typename Arg>
+    requires std::is_convertible_v<Arg, variant_type> constexpr basic_data(Arg&& arg)
         : _var(std::forward<Arg>(arg)) {}
 
     constexpr basic_data(int i)

@@ -2,3 +2,4 @@ Compiler-ID: GNU
 C++-Version: C++17
 C-Compiler: gcc-9
 C++-Compiler: g++-9
+C++-Flags: -fconcepts -std=c++2a
