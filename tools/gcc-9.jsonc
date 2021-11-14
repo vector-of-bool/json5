@@ -1,5 +1,7 @@
 {
     "compiler_id": "gnu",
     "cxx_compiler": "g++-9",
-    "cxx_flags": "-fconcepts -std=c++2a"
+    "cxx_flags": "-fconcepts -std=c++2a",
+    "debug": true,
+    "optimize": false
 }
