@@ -163,14 +163,19 @@ Data parse_next_value(parser& p) {
 }
 
 template <typename Data = data>
-Data parse_data(std::string_view str) {
-    parser p{str};
+Data parse_data(std::string_view str, parse_options opts) {
+    parser p{str, opts};
     auto   v      = parse_next_value<Data>(p);
     auto   eof_ev = p.next();
     if (eof_ev.kind != eof_ev.eof) {
         detail::throw_error("Trailing characters in JSON data", eof_ev.token);
     }
     return v;
+}
+
+template <typename Data = data>
+Data parse_data(std::string_view str) {
+    return parse_data(str, parse_options{});
 }
 
 }  // namespace json5

@@ -35,6 +35,10 @@ struct token {
         eof,
     } kind
         = invalid;
+
+    constexpr bool is_squote_string() const noexcept {
+        return kind == string_literal && !spelling.empty() && spelling.front() == '\'';
+    }
 };
 
 class tokenizer {

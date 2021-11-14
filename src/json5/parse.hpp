@@ -12,6 +12,35 @@ struct parser_impl;
 
 }  // namespace detail
 
+enum class toggle {
+    off,
+    on,
+};
+
+struct parse_options {
+    toggle c_comments             = toggle::on;
+    toggle trailing_commas        = toggle::on;
+    toggle bare_ident_keys        = toggle::on;
+    toggle single_quote_strings   = toggle::on;
+    toggle escape_newline_strings = toggle::on;
+};
+
+constexpr inline parse_options json5_options = {};
+constexpr inline parse_options jsonc_options = {
+    .c_comments             = toggle::on,
+    .trailing_commas        = toggle::off,
+    .bare_ident_keys        = toggle::off,
+    .single_quote_strings   = toggle::off,
+    .escape_newline_strings = toggle::off,
+};
+constexpr inline parse_options json_strict_options = {
+    .c_comments             = toggle::off,
+    .trailing_commas        = toggle::off,
+    .bare_ident_keys        = toggle::off,
+    .single_quote_strings   = toggle::off,
+    .escape_newline_strings = toggle::off,
+};
+
 struct parse_event {
     enum kind_t {
         invalid,
@@ -47,14 +76,18 @@ class parser {
 
     std::string_view _error_message;
 
+    parse_options _opts;
+
     friend struct detail::parser_impl;
 
     enum state_t {
         top,
 
+        array_value_after_comma,
         array_value_or_close,
         array_tail,
 
+        object_key_after_comma,
         object_key_or_close,
         object_kv_colon,
         object_value,
@@ -63,8 +96,12 @@ class parser {
         = top;
 
 public:
+    explicit parser(std::string_view buf, parse_options opts)
+        : _toks(buf)
+        , _opts(opts) {}
+
     explicit parser(std::string_view buf)
-        : _toks(buf) {}
+        : parser(buf, parse_options{}) {}
 
     class event_iterator {
         parser* _p;

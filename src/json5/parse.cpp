@@ -1,6 +1,7 @@
 #include "./parse.hpp"
 
 #include <cassert>
+#include <stdexcept>
 
 using namespace json5;
 
@@ -83,6 +84,9 @@ struct parser_impl {
         self._toks.advance();
         // And skip all comments. They have no effect on parser state.
         while (kind() == token::comment) {
+            if (self._opts.c_comments == toggle::off) {
+                return fail("Comments are not allowed.");
+            }
             self._toks.advance();
         }
 
@@ -113,13 +117,24 @@ struct parser_impl {
         case parser::array_value_or_close:
             return parse_array_elem();
 
+        // Parse an array value, which follows a comma. (trailing commas are disabled)
+        case parser::array_value_after_comma:
+            if (self._toks.current().kind == token::punct_bracket_close) {
+                return fail("Trailing commas are not allowed: Expected an array value.");
+            }
+            return parse_value();
+
         // Parse either a comma `,` or a closing `]`
         case parser::array_tail:
             return parse_array_tail();
 
         // Parse either an object key, or a closing `}`
         case parser::object_key_or_close:
-            return parse_obj_elem();
+            return parse_obj_elem(false);
+
+        // Parse an object key. No closing '}' allowed.
+        case parser::object_key_after_comma:
+            return parse_obj_elem(true);
 
         // Parse a colon for the object member, then parse the value for the member
         case parser::object_kv_colon: {
@@ -164,15 +179,29 @@ struct parser_impl {
      * Parse an object element, or the closing of an object. This state appears after an opening `{`
      * or a continuing comma `,`.
      */
-    parse_event parse_obj_elem() noexcept {
+    parse_event parse_obj_elem(bool require_key_after_comma) noexcept {
         switch (kind()) {
         /// A closing brace
         case token::punct_brace_close:
+            if (require_key_after_comma) {
+                return fail("Trailing commas are not allowed: Expected an object key.");
+            }
             return object_end();
         /// The member may be either an identifier or a string literal
         case token::identifier:
+            if (kind() == token::identifier && self._opts.bare_ident_keys == toggle::off) {
+                return fail("Bare identifier object keys are not allowed.");
+            }
+            // fallthrough
         case token::string_literal:
             become(self.object_kv_colon);
+            if (curtok().is_squote_string() && self._opts.single_quote_strings == toggle::off) {
+                return fail("Single-quote strings are not allowed.");
+            }
+            if (self._opts.escape_newline_strings == toggle::off
+                && curtok().spelling.find('\n') != std::string_view::npos) {
+                return fail("Escaped newlines in strings are not allowed.");
+            }
             return parse_event{parse_event::object_key, curtok()};
         /// Unexpected end-of-file
         case token::eof:
@@ -182,7 +211,11 @@ struct parser_impl {
         case token::null_literal:
         case token::punct_brace_open:
         case token::punct_bracket_open:
-            return fail("Object member keys must be strings or identifiers.");
+            if (self._opts.bare_ident_keys == toggle::on) {
+                return fail("Object member keys must be strings or identifiers.");
+            } else {
+                return fail("Object member keys must be strings.");
+            }
         case token::punct_comma:
             return fail("Extraneous `,` in object literal.");
         /// Any other token is not allowed
@@ -203,7 +236,11 @@ struct parser_impl {
         /// A comma, so we should now parse another value or a closing
         /// bracket `]`
         case token::punct_comma:
-            become(self.array_value_or_close);
+            if (self._opts.trailing_commas == toggle::on) {
+                become(self.array_value_or_close);
+            } else {
+                become(self.array_value_after_comma);
+            }
             return parse_next();
         /// Unexpected end-of-file
         case token::eof:
@@ -222,7 +259,11 @@ struct parser_impl {
         switch (kind()) {
         /// A comma should be followed by another object key or a closing `}`
         case token::punct_comma:
-            become(self.object_key_or_close);
+            if (self._opts.trailing_commas == toggle::on) {
+                become(self.object_key_or_close);
+            } else {
+                become(self.object_key_after_comma);
+            }
             return parse_next();
         /// A closing brace ends the object
         case token::punct_brace_close:
@@ -249,6 +290,13 @@ struct parser_impl {
         case tok.boolean_literal:
             return value(parse_event::boolean_literal);
         case tok.string_literal:
+            if (self._opts.single_quote_strings == toggle::off && tok.is_squote_string()) {
+                return fail("Single-quote strings are not allowed.");
+            }
+            if (self._opts.escape_newline_strings == toggle::off
+                && tok.spelling.find('\n') != std::string_view::npos) {
+                return fail("Escaped newlines in strings are not allowed.");
+            }
             return value(parse_event::string_literal);
         case tok.number_literal:
             return value(parse_event::number_literal);

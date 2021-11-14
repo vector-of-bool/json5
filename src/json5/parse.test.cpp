@@ -157,10 +157,8 @@ TEST_CASE("Resumable") {
                 });
 }
 
-void check_reject(std::string_view str, std::string_view expect_message) {
-    INFO("Parsing bad string: " << str);
+void check_reject(json5::parser& p, std::string_view expect_message) {
     INFO("Expecting message: " << expect_message);
-    json5::parser p{str};
     for (auto ev : p) {
         if (ev.kind == json5::parse_event::eof) {
             FAIL_CHECK("End-of-file reached without generating an error");
@@ -170,6 +168,12 @@ void check_reject(std::string_view str, std::string_view expect_message) {
             break;
         }
     }
+}
+
+void check_reject(std::string_view str, std::string_view expect_message) {
+    INFO("Parsing bad string: " << str);
+    json5::parser p{str};
+    check_reject(p, expect_message);
 }
 
 TEST_CASE("Reject") {
@@ -183,5 +187,62 @@ TEST_CASE("Reject") {
     check_reject("['foo',,]", "Extraneous `,` in array literal.");
     check_reject("{'foo': ,}", "Expected value before `,` in object literal.");
     check_reject("{'foo': 12,,}", "Extraneous `,` in object literal.");
+    check_reject("[,]", "Extraneous `,` in array literal.");
     check_reject("foo", "An object key identifier is not a valid value.");
+}
+
+TEST_CASE("Reject restricted opts") {
+    json5::parse_options opts;
+
+    using toggle                = json5::toggle;
+    opts.c_comments             = GENERATE(toggle::on, toggle::off);
+    opts.trailing_commas         = GENERATE(toggle::on, toggle::off);
+    opts.bare_ident_keys        = GENERATE(toggle::on, toggle::off);
+    opts.single_quote_strings    = GENERATE(toggle::on, toggle::off);
+    opts.escape_newline_strings = GENERATE(toggle::on, toggle::off);
+
+    struct case_ {
+        std::string_view given;
+        json5::toggle    toggle_value;
+        std::string_view error_message = "";
+    };
+    case_ cases[] = {
+        {.given         = "[1, 2, /* comment */ 3]",
+         .toggle_value  = opts.c_comments,
+         .error_message = "Comments are not allowed."},
+        {.given         = "[1, 2, 3,]",
+         .toggle_value  = opts.trailing_commas,
+         .error_message = "Trailing commas are not allowed: Expected an array value."},
+        {.given         = "{\"foo\": true,}",
+         .toggle_value  = opts.trailing_commas,
+         .error_message = "Trailing commas are not allowed: Expected an object key."},
+        {.given         = "{foo: true}",
+         .toggle_value  = opts.bare_ident_keys,
+         .error_message = "Bare identifier object keys are not allowed."},
+        {.given         = "{'foo': true}",
+         .toggle_value  = opts.single_quote_strings,
+         .error_message = "Single-quote strings are not allowed."},
+        {.given         = "{\"foo\": 'bar'}",
+         .toggle_value  = opts.single_quote_strings,
+         .error_message = "Single-quote strings are not allowed."},
+        {.given         = "\"foo\\\nbar\"",
+         .toggle_value  = opts.escape_newline_strings,
+         .error_message = "Escaped newlines in strings are not allowed."},
+        {.given         = "{\"foo\\\nbar\": true}",
+         .toggle_value  = opts.escape_newline_strings,
+         .error_message = "Escaped newlines in strings are not allowed."},
+    };
+
+    for (const auto [given, tgl, error] : cases) {
+        CAPTURE(given);
+        json5::parser p{given, opts};
+        if (tgl == json5::toggle::on) {
+            // We expect this feature to be enabled
+            for (auto ev : p) {
+                CHECK(ev.kind != ev.invalid);
+            }
+        } else {
+            check_reject(p, error);
+        }
+    }
 }
